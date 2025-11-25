@@ -226,6 +226,25 @@ async def index(request: Request):
 - Python 3.10+
 - Vite with `@skybolt/vite-plugin`
 
+## Publishing
+
+This package is maintained in the [Skybolt monorepo](https://github.com/JensRoland/skybolt) and automatically synced to [skybolt-python](https://github.com/JensRoland/skybolt-python).
+
+To publish a new version:
+
+1. In the **monorepo**, update the version in `packages/python/pyproject.toml` and push to main
+2. Wait for the sync workflow to push changes to the split repo
+3. In the **split repo** (skybolt-python), create and push a tag:
+
+```sh
+git clone git@github.com:JensRoland/skybolt-python.git
+cd skybolt-python
+git tag v3.1.0
+git push origin v3.1.0
+```
+
+The `publish.yml` GitHub Action will automatically build and publish the package to PyPI using trusted publishing (OIDC).
+
 ## License
 
 MIT
