@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "skybolt-python"
+name = "skybolt"
 version = "3.1.0"
 description = "High-performance asset caching for multi-page applications"
 readme = "README.md"

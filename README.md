@@ -5,13 +5,13 @@ Python adapter for [Skybolt](https://github.com/JensRoland/skybolt) - High-perfo
 ## Installation
 
 ```bash
-pip install skybolt-python
+pip install skybolt
 ```
 
 Or with uv:
 
 ```bash
-uv add skybolt-python
+uv add skybolt
 ```
 
 ## Prerequisites
@@ -230,20 +230,21 @@ async def index(request: Request):
 
 This package is maintained in the [Skybolt monorepo](https://github.com/JensRoland/skybolt) and automatically synced to [skybolt-python](https://github.com/JensRoland/skybolt-python).
 
-To publish a new version:
-
-1. In the **monorepo**, update the version in `packages/python/pyproject.toml` and push to main
-2. Wait for the sync workflow to push changes to the split repo
-3. In the **split repo** (skybolt-python), create and push a tag:
+To publish a new version, run one command from the `packages/python` directory:
 
 ```sh
-git clone git@github.com:JensRoland/skybolt-python.git
-cd skybolt-python
-git tag v3.1.0
-git push origin v3.1.0
+./scripts/release.sh patch   # 3.1.0 → 3.1.1
+./scripts/release.sh minor   # 3.1.0 → 3.2.0
+./scripts/release.sh major   # 3.1.0 → 4.0.0
 ```
 
-The `publish.yml` GitHub Action will automatically build and publish the package to PyPI using trusted publishing (OIDC).
+This automatically:
+
+1. Bumps the version in `VERSION`, `pyproject.toml`, and source files
+2. Commits and pushes to the monorepo
+3. Sync workflow pushes changes to the split repo
+4. `tag-version.yml` in the split repo creates the `v*` tag
+5. `publish.yml` builds and publishes to PyPI using trusted publishing (OIDC)
 
 ## License
 
