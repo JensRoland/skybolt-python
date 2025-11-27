@@ -49,7 +49,7 @@ class Skybolt:
         )
         self._cdn_url = cdn_url.rstrip("/") if cdn_url else None
 
-    def css(self, entry: str) -> str:
+    def css(self, entry: str, async_load: bool = False) -> str:
         """
         Render CSS asset.
 
@@ -58,6 +58,7 @@ class Skybolt:
 
         Args:
             entry: Source file path (e.g., 'src/css/main.css')
+            async_load: Load CSS asynchronously (non-render-blocking)
 
         Returns:
             HTML string
@@ -71,9 +72,25 @@ class Skybolt:
 
         # Client has current version - external link (SW serves from cache)
         if self._has_cached(entry, asset["hash"]):
+            if async_load:
+                # Preload + onload swap for non-blocking load
+                return (
+                    f'<link rel="preload" href="{escape(url)}" as="style" onload="this.rel=\'stylesheet\'">'
+                    f'<noscript><link rel="stylesheet" href="{escape(url)}"></noscript>'
+                )
             return f'<link rel="stylesheet" href="{escape(url)}">'
 
         # First visit - inline with cache attributes
+        if async_load:
+            # media="print" trick: browser parses but doesn't apply until onload swaps to "all"
+            return (
+                f'<style media="print" onload="this.media=\'all\'"'
+                f' sb-asset="{escape(entry)}:{escape(asset["hash"])}"'
+                f' sb-url="{escape(url)}">'
+                f'{asset["content"]}'
+                f'</style>'
+            )
+
         return (
             f'<style'
             f' sb-asset="{escape(entry)}:{escape(asset["hash"])}"'

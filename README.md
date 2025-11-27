@@ -66,15 +66,24 @@ sb = Skybolt(
 )
 ```
 
-### `css(entry: str) -> str`
+### `css(entry: str, async_load: bool = False) -> str`
 
 Render CSS asset.
 
 - First visit: Inlines CSS with caching attributes
 - Repeat visit: Outputs `<link>` tag (Service Worker serves from cache)
 
+When `async_load` is `True`, CSS loads non-blocking:
+
+- First visit: Uses `media="print"` trick, swaps to `all` on load
+- Repeat visit: Uses `<link rel="preload">` with `onload`
+
 ```python
-sb.css("src/css/main.css")
+# Blocking (default) - for critical CSS
+sb.css("src/css/critical.css")
+
+# Non-blocking - for non-critical CSS
+sb.css("src/css/main.css", async_load=True)
 ```
 
 ### `script(entry: str, module: bool = True) -> str`
