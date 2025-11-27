@@ -1,4 +1,4 @@
-name: Tag Version
+name: Tag and Publish
 
 on:
   push:
@@ -8,10 +8,12 @@ on:
       - 'VERSION'
 
 jobs:
-  tag:
+  tag-and-publish:
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write
+      id-token: write  # Required for trusted publishing
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,3 +44,22 @@ jobs:
       - name: Skip (tag exists)
         if: steps.check_tag.outputs.exists == 'true'
         run: echo "Tag v${{ steps.version.outputs.version }} already exists, skipping"
+
+      # Publish to PyPI
+      - name: Install uv
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python
+        if: steps.check_tag.outputs.exists == 'false'
+        run: uv python install 3.12
+
+      - name: Build package
+        if: steps.check_tag.outputs.exists == 'false'
+        run: uv build
+
+      - name: Publish to PyPI
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # Uses trusted publishing (OIDC) - no API token needed
+        # Configure at: https://pypi.org/manage/project/skybolt/settings/publishing/

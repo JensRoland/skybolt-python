@@ -2,21 +2,35 @@
 #
 # Release script for skybolt (Python adapter)
 #
-# Usage: ./scripts/release.sh [patch|minor|major]
+# Usage: ./scripts/release.sh [patch|minor|major] [--no-push]
 #
 # This script:
 # 1. Bumps the version in VERSION file
 # 2. Syncs the version to pyproject.toml and source files
-# 3. Commits and pushes the changes
+# 3. Commits and pushes the changes (unless --no-push is specified)
 #
 # The split repo's tag-version.yml workflow will automatically create the tag.
 
 set -e
 
-BUMP_TYPE=${1:-patch}
+BUMP_TYPE=""
+NO_PUSH=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --no-push)
+            NO_PUSH=true
+            ;;
+        patch|minor|major)
+            BUMP_TYPE="$arg"
+            ;;
+    esac
+done
+
+BUMP_TYPE=${BUMP_TYPE:-patch}
 
 if [[ ! "$BUMP_TYPE" =~ ^(patch|minor|major)$ ]]; then
-    echo "Usage: $0 [patch|minor|major]"
+    echo "Usage: $0 [patch|minor|major] [--no-push]"
     exit 1
 fi
 
@@ -64,12 +78,19 @@ sed -i '' "s/VERSION = \"${CURRENT_VERSION}\"/VERSION = \"${NEW_VERSION}\"/" src
 
 echo "Updated: VERSION, pyproject.toml, src/skybolt/__init__.py, src/skybolt/skybolt.py"
 
-# Commit and push
+# Commit and optionally push
 git add -A
 git commit -m "chore(python): bump skybolt to v${NEW_VERSION}"
-git push origin main
 
-echo ""
-echo "✓ Pushed skybolt (Python) v${NEW_VERSION}"
-echo ""
-echo "Once synced to the split repo, tag-version.yml will create the v${NEW_VERSION} tag."
+if [ "$NO_PUSH" = true ]; then
+    echo ""
+    echo "✓ Committed skybolt (Python) v${NEW_VERSION} (not pushed)"
+    echo ""
+    echo "Run 'git push origin main' when ready."
+else
+    git push origin main
+    echo ""
+    echo "✓ Pushed skybolt (Python) v${NEW_VERSION}"
+    echo ""
+    echo "Once synced to the split repo, tag-version.yml will create the v${NEW_VERSION} tag."
+fi
