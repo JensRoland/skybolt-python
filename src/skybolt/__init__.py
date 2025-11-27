@@ -7,5 +7,5 @@ optimized HTML tags with intelligent caching via Service Workers.
 
 from .skybolt import Skybolt
 
-__version__ = "3.1.0"
+__version__ = "3.2.0"
 __all__ = ["Skybolt", "__version__"]
