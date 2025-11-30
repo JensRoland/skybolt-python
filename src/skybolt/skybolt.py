@@ -186,15 +186,34 @@ class Skybolt:
         Call this once in <head> before other Skybolt assets.
         Outputs config meta tag and client script.
 
+        On first visit (or cache miss), the launcher is inlined with sb-asset
+        and sb-url attributes so the client can cache itself.
+
+        On repeat visits (cache hit), returns an external script tag. The Service
+        Worker will serve the launcher from cache (~5ms response time).
+
         Returns:
             HTML string
         """
         sw_path = self._map.get("serviceWorker", {}).get("path", "/skybolt-sw.js")
         config = json.dumps({"swPath": sw_path}, separators=(",", ":"))
 
+        launcher = self._map["launcher"]
+        url = self._resolve_url(launcher["url"])
+
+        meta = f'<meta name="skybolt-config" content="{escape(config)}">\n'
+
+        if self._has_cached("skybolt-launcher", launcher["hash"]):
+            # Repeat visit - external script (SW serves from cache)
+            return f'{meta}<script type="module" src="{escape(url)}"></script>'
+
+        # First visit - inline with sb-asset and sb-url for self-caching
         return (
-            f'<meta name="skybolt-config" content="{escape(config)}">\n'
-            f'<script type="module">{self._map["client"]["script"]}</script>'
+            f'{meta}<script type="module"'
+            f' sb-asset="skybolt-launcher:{escape(launcher["hash"])}"'
+            f' sb-url="{escape(url)}">'
+            f'{launcher["content"]}'
+            f'</script>'
         )
 
     def get_asset_url(self, entry: str) -> str | None:
@@ -221,6 +240,50 @@ class Skybolt:
             Asset hash or None if not found
         """
         return self._map.get("assets", {}).get(entry, {}).get("hash")
+
+    def is_cached_url(self, url: str) -> bool:
+        """
+        Check if an asset URL is currently cached by the client.
+
+        This is useful for Chain Lightning integration where we need to check
+        cache status by URL rather than source path.
+
+        Args:
+            url: The asset URL (e.g., '/assets/main-Abc123.css')
+
+        Returns:
+            True if the asset is cached
+        """
+        # Build URL to entry mapping if not already built
+        if not hasattr(self, "_url_to_entry"):
+            self._url_to_entry: dict[str, dict[str, str]] = {}
+            for entry, asset in self._map.get("assets", {}).items():
+                self._url_to_entry[asset["url"]] = {
+                    "entry": entry,
+                    "hash": asset["hash"],
+                }
+
+        info = self._url_to_entry.get(url)
+        if info is None:
+            return False
+
+        return self._has_cached(info["entry"], info["hash"])
+
+    def has_cached_entry(self, entry: str, hash_value: str) -> bool:
+        """
+        Check if client has a specific entry:hash pair cached.
+
+        Useful for external integrations (like Chain Lightning) that manage
+        their own assets outside of Skybolt's render-map.
+
+        Args:
+            entry: The entry name (e.g., 'chain-lightning' or 'cl-manifest')
+            hash_value: The expected hash value
+
+        Returns:
+            True if the entry:hash pair is in the client's cache
+        """
+        return self._has_cached(entry, hash_value)
 
     def _resolve_url(self, url: str) -> str:
         """Resolve URL with optional CDN prefix."""
