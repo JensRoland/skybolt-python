@@ -11,7 +11,8 @@ import json
 from html import escape
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
+
+from .cache_digest import CacheDigest
 
 
 class Skybolt:
@@ -22,7 +23,7 @@ class Skybolt:
     optimized HTML tags with intelligent caching via Service Workers.
     """
 
-    VERSION = "3.3.0"
+    VERSION = "3.4.0"
 
     def __init__(
         self,
@@ -44,10 +45,10 @@ class Skybolt:
         """
         render_map_path = Path(render_map_path)
         self._map: dict[str, Any] = json.loads(render_map_path.read_text())
-        self._client_cache = self._parse_cookie(
-            (cookies or {}).get("sb_assets", "")
-        )
         self._cdn_url = cdn_url.rstrip("/") if cdn_url else None
+
+        # Parse Cache Digest from sb_digest cookie
+        self._cache_digest = CacheDigest.from_base64((cookies or {}).get("sb_digest", ""))
 
     def css(self, entry: str, async_load: bool = False) -> str:
         """
@@ -298,25 +299,7 @@ class Skybolt:
 
     def _has_cached(self, entry: str, hash_value: str) -> bool:
         """Check if client has a specific asset version cached."""
-        return self._client_cache.get(entry) == hash_value
-
-    def _parse_cookie(self, cookie: str) -> dict[str, str]:
-        """Parse sb_assets cookie into name => hash map."""
-        if not cookie:
-            return {}
-
-        decoded = unquote(cookie)
-        cache: dict[str, str] = {}
-
-        for pair in decoded.split(","):
-            # Find last colon (hash doesn't contain colons, but paths might)
-            colon_pos = pair.rfind(":")
-            if colon_pos != -1:
-                name = pair[:colon_pos]
-                hash_value = pair[colon_pos + 1:]
-                cache[name] = hash_value
-
-        return cache
+        return self._cache_digest.lookup(f"{entry}:{hash_value}")
 
     def _build_tag(self, tag: str, attrs: dict[str, str]) -> str:
         """Build an HTML tag."""

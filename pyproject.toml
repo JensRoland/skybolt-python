@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "skybolt"
-version = "3.3.0"
+version = "3.4.0"
 description = "High-performance asset caching for multi-page applications"
 readme = "README.md"
 license = "MIT"
@@ -44,3 +44,8 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/skybolt"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.1",
+]
